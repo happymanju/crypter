@@ -12,25 +12,44 @@ import (
 // CLI parses command line arguments and executes app with provided parameters, and returns an exit code
 func CLI(args []string) int {
 	encodeFlags := flag.NewFlagSet("encode", flag.ExitOnError)
-	encodeFormat := encodeFlags.String("f", "base64", "format to encode: base64 or md5")
+	encodeFormat := encodeFlags.String("f", "base64", "format to encode")
 	encodeOutput := encodeFlags.String("o", "stdout", "write encoded output to stdout or file")
 
 	decodeFlags := flag.NewFlagSet("decode", flag.ExitOnError)
 	decodeFormat := decodeFlags.String("f", "base64", "format to decode from")
 	decodeOutput := decodeFlags.String("o", "stdout", "write decoded output to stdout or file")
 
+	var ac AppContext = AppContext{}
+	var encodeMap map[string]func([]byte) []byte
+	encodeMap["base64"] = toBase64
+	encodeMap["hex"] = toHex
+
+	var decodeMap map[string]func(string) ([]byte, error)
+	decodeMap["base64"] = fromBase64String
+	decodeMap["hex"] = fromHexString
+
+	switch args[1] {
+	case "encode":
+		encodeFlags.Parse(args[2:])
+		// TODO
+
+	}
+
 	return 0
 }
 
+func Run(ac AppContext) error {
+	// TODO
+	return nil
+}
+
 type AppContext struct {
-	mode   string
-	decode bool
+	fun    interface{}
 	output io.Writer
 }
 
-func (app *AppContext) fromArgs(mode string, decode bool, output io.Writer) *AppContext {
-	app.mode = mode
-	app.decode = decode
+func (app *AppContext) fromArgs(fun interface{}, output io.Writer) *AppContext {
+	app.fun = fun
 	app.output = output
 
 	return app
@@ -38,6 +57,7 @@ func (app *AppContext) fromArgs(mode string, decode bool, output io.Writer) *App
 
 func (app *AppContext) Run() error {
 	// TODO
+	return nil
 }
 
 func toBase64(src []byte) []byte {
@@ -60,14 +80,14 @@ func fromBase64(src []byte) ([]byte, error) {
 	return decodedData, nil
 }
 
-func fromBase64String(src string) (string, error) {
+func fromBase64String(src string) ([]byte, error) {
 	decodedData := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
 
 	decodedData, err := fromBase64([]byte(src))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(decodedData), nil
+	return decodedData, nil
 
 }
 
@@ -76,14 +96,14 @@ func toBase64String(src []byte) string {
 	return encodedString
 }
 
-func toHexString(src []byte) string {
+func toHex(src []byte) []byte {
 	var encodedData []byte = make([]byte, hex.EncodedLen(len(src)))
 
 	n := hex.Encode(encodedData, src)
 
 	fmt.Fprintf(os.Stdout, "Encoded %v bytes to hex", n)
 
-	return string(encodedData)
+	return encodedData
 }
 
 func fromHexString(src string) ([]byte, error) {
